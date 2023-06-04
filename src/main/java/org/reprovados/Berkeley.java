@@ -36,7 +36,6 @@ public class Berkeley {
         }
 
     }
-
     private static void masterProcess() {
         try {
             InetAddress multicastAddress = InetAddress.getByName(MULTICAST_ADDRESS);
@@ -44,43 +43,45 @@ public class Berkeley {
 
             multicastSocket.joinGroup(multicastAddress);
 
-            String message = "Hi, slaves!";
-            byte[] buffer = message.getBytes();
-
-            DatagramPacket datagramPacket = new DatagramPacket(buffer, buffer.length, multicastAddress, MULTICAST_PORT);
-            multicastSocket.send(datagramPacket);
-
-            byte[] answerBuffer = new byte[256];
-            DatagramPacket answerPacket = new DatagramPacket(answerBuffer, answerBuffer.length);
 
             while (true) {
+                String message = "Get Slave time!";
+                byte[] buffer = message.getBytes();
+
+                DatagramPacket datagramPacket = new DatagramPacket(buffer, buffer.length, multicastAddress, MULTICAST_PORT);
+                multicastSocket.send(datagramPacket);
+
+                byte[] answerBuffer = new byte[256];
+                DatagramPacket answerPacket = new DatagramPacket(answerBuffer, answerBuffer.length);
                 multicastSocket.receive(answerPacket);
                 String resposta = new String(answerPacket.getData(), 0, answerPacket.getLength());
                 System.out.println("Received message from slave: " + resposta);
+                DatagramSocket unicastSocket = new DatagramSocket(MASTER_PORT);
 
-                // Verifica se todas as respostas foram recebidas
-                if (todasRespostasRecebidas()) {
+                while (true) {
+                    byte[] abuffer = new byte[256];
+                    DatagramPacket slavePacket = new DatagramPacket(abuffer, abuffer.length);
+                    System.out.println("Aguardando mensagem");
+                    // Tempo para o mestre poder inicilizar a espera de uma comunicação unicast (usaremos como descompasso do mestre)
+                    Thread.sleep(100);
+                    unicastSocket.receive(slavePacket);
+                    System.out.println("mensagem recebida");
+                    String receivedMessage = new String(slavePacket.getData(), 0, slavePacket.getLength());
+
+                    var process = new Process(slavePacket.getAddress().getHostAddress(), slavePacket.getPort(), Integer.parseInt(receivedMessage));
+
+                    processes.add(process);
+                    System.out.println("Process info received: " + process);
+                    unicastSocket.close();
                     break;
                 }
+
+                Thread.sleep(5000);
+                processes.clear();
             }
 
-            while (true) {
-                DatagramSocket unicastSocket = new DatagramSocket(MASTER_PORT);
-                byte[] abuffer = new byte[256];
-                DatagramPacket slavePacket = new DatagramPacket(abuffer, abuffer.length);
-
-                unicastSocket.receive(slavePacket);
-                String receivedMessage = new String(slavePacket.getData(), 0, slavePacket.getLength());
-
-                var process = new Process(slavePacket.getAddress().getHostAddress(), slavePacket.getPort(), Integer.parseInt(receivedMessage));
-
-                processes.add(process);
-                System.out.println("Process info received: " + process);
-                break;
-            }
-
-            multicastSocket.leaveGroup(multicastAddress);
-            multicastSocket.close();
+//            multicastSocket.leaveGroup(multicastAddress);
+//            multicastSocket.close();
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -91,29 +92,29 @@ public class Berkeley {
         try {
             InetAddress multicastAddress = InetAddress.getByName(MULTICAST_ADDRESS);
             MulticastSocket multicastSocket = new MulticastSocket(MULTICAST_PORT);
-
             multicastSocket.joinGroup(multicastAddress);
+            while (true) {
+                byte[] buffer = new byte[256];
+                DatagramPacket datagramPacket = new DatagramPacket(buffer, buffer.length);
 
-            byte[] buffer = new byte[256];
-            DatagramPacket datagramPacket = new DatagramPacket(buffer, buffer.length);
+                multicastSocket.receive(datagramPacket);
+                String receivedMessage = new String(datagramPacket.getData(), 0, datagramPacket.getLength());
+                System.out.println("Received message from master: " + receivedMessage);
 
-            multicastSocket.receive(datagramPacket);
-            String receivedMessage = new String(datagramPacket.getData(), 0, datagramPacket.getLength());
-            System.out.println("Received message from master: " + receivedMessage);
+                // Processa a mensagem recebida do mestre e gera a resposta
+                String answer = String.valueOf(startTime);
+                byte[] answerBuffer = answer.getBytes();
+                System.out.println("Gerando mensagem para ser enviada");
 
-            // Processa a mensagem recebida do mestre e gera a resposta
-            String answer = String.valueOf(startTime);
-            byte[] answerBuffer = answer.getBytes();
+                DatagramSocket unicastSocket = new DatagramSocket(port);
+                DatagramPacket answerPacket = new DatagramPacket(answerBuffer, answerBuffer.length,
+                        datagramPacket.getAddress(), MASTER_PORT);
 
-            DatagramSocket unicastSocket = new DatagramSocket(port);
-            DatagramPacket answerPacket = new DatagramPacket(answerBuffer, answerBuffer.length,
-                    datagramPacket.getAddress(), MASTER_PORT);
-            unicastSocket.send(answerPacket);
+                unicastSocket.send(answerPacket);
+                System.out.println("Mensagem enviada" + answerPacket.getAddress().getHostAddress() +" " + answerPacket.getPort());
 
-            unicastSocket.close();
-            multicastSocket.leaveGroup(multicastAddress);
-            multicastSocket.close();
-
+                unicastSocket.close();
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
