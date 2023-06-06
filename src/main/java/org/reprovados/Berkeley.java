@@ -13,6 +13,10 @@ public class Berkeley {
     private static final int MASTER_PORT = 8000;
     private static final String MULTICAST_ADDRESS = "239.0.0.1";
 
+    private static final long MAX_TOLERATION = 5000;
+
+    private static final List<Process> included = new ArrayList<>();
+
     private static final List<Process> processes = new ArrayList<>();
 
     public static void main(String[] args) {
@@ -81,7 +85,28 @@ public class Berkeley {
 
                 unicastSocket.close();
 
+
+                boolean needMediaCalculation = true;
+
+                included.addAll(processes);
+                //Verifica se precisa calcular uma nova média
+
+                while (needMediaCalculation){
+                    long somaTudo = 0;
+                    //Faz a media da lista completa
+                    for (Process p: included) {
+                        somaTudo =+ p.getCurrentTime();
+                    }
+                    long media = somaTudo / included.size();
+                    int includedSize = included.size();
+
+                    included.removeIf(p -> Math.abs(p.getCurrentTime() - media) > MAX_TOLERATION);
+
+                    needMediaCalculation = includedSize != included.size();
+                }
+
                 Thread.sleep(5000);
+
 
                 // calcular média dos processos
 
