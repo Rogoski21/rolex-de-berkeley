@@ -19,6 +19,8 @@ public class Berkeley {
 
     private static final List<Process> processes = new ArrayList<>();
 
+    private static int time = 1000; // Initial value
+
     public static void main(String[] args) {
         int processId = Integer.parseInt(args[0]);
         String host = args[1];
@@ -26,6 +28,30 @@ public class Berkeley {
         long startTime = Long.parseLong(args[3]);
         long processTime = Long.parseLong(args[4]);
         long aDelay = Long.parseLong(args[5]);
+        long clockIncremention = Long.parseLong(args[6]);
+
+        // Create a separate thread for the routine code
+        // Create a separate thread for the routine code
+        Thread routineThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    // Your routine code here
+                    long currentTime = GlobalTime.getTime();
+                    currentTime += clockIncremention; // Increment the time by 100 every second
+                    GlobalTime.incrementTime(currentTime);
+
+                    try {
+                        Thread.sleep(1000); // Wait for 1 second
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        // Start the routine thread
+        routineThread.start();
 
         if (args.length != 6) {
             System.out.println("The program should run with 6 arguments. i.e: java Process <processId> <host> <port> <time> <ptime> <adelay>");
@@ -81,6 +107,7 @@ public class Berkeley {
 
                     processes.add(process);
                     System.out.println("Process info received: " + process);
+                    System.out.println("Time: " + GlobalTime.getTime());
                 }
 
                 unicastSocket.close();
@@ -91,22 +118,21 @@ public class Berkeley {
                 included.addAll(processes);
                 //Verifica se precisa calcular uma nova média
 
-                while (needMediaCalculation){
-                    long somaTudo = 0;
-                    //Faz a media da lista completa
-                    for (Process p: included) {
-                        somaTudo =+ p.getCurrentTime();
-                    }
-                    long media = somaTudo / included.size();
-                    int includedSize = included.size();
-
-                    included.removeIf(p -> Math.abs(p.getCurrentTime() - media) > MAX_TOLERATION);
-
-                    needMediaCalculation = includedSize != included.size();
-                }
+//                while (needMediaCalculation){
+//                    long somaTudo = 0;
+//                    //Faz a media da lista completa
+//                    for (Process p: included) {
+//                        somaTudo =+ p.getCurrentTime();
+//                    }
+//                    long media = somaTudo / included.size();
+//                    int includedSize = included.size();
+//
+//                    included.removeIf(p -> Math.abs(p.getCurrentTime() - media) > MAX_TOLERATION);
+//
+//                    needMediaCalculation = includedSize != included.size();
+//                }
 
                 Thread.sleep(5000);
-
 
                 // calcular média dos processos
 

@@ -14,6 +14,37 @@ public class Process {
         this.currentTime = currentTime;
     }
 
+    public String getHost() {
+        return host;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    public long getCurrentTime() {
+        return currentTime;
+    }
+
+    public void setCurrentTime(long currentTime) {
+        this.currentTime = currentTime;
+    }
+
+    public int getaDelay() {
+        return aDelay;
+    }
+
+    public void setaDelay(int aDelay) {
+        this.aDelay = aDelay;
+    }
 
     @Override
     public String toString() {
