@@ -28,7 +28,7 @@ public class Berkeley {
         long startTime = Long.parseLong(args[3]);
         long processTime = Long.parseLong(args[4]);
         long aDelay = Long.parseLong(args[5]);
-        long clockIncremention = Long.parseLong(args[6]);
+//        long clockIncremention = Long.parseLong(args[6]);
 
         // Create a separate thread for the routine code
         // Create a separate thread for the routine code
@@ -38,7 +38,7 @@ public class Berkeley {
                 while (true) {
                     // Your routine code here
                     long currentTime = GlobalTime.getTime();
-                    currentTime += clockIncremention; // Increment the time by 100 every second
+                    currentTime += 950; // Increment the time by 100 every second
                     GlobalTime.incrementTime(currentTime);
 
                     try {
@@ -103,7 +103,7 @@ public class Berkeley {
                     System.out.println("mensagem recebida");
                     String receivedMessage = new String(slavePacket.getData(), 0, slavePacket.getLength());
 
-                    var process = new Process(slavePacket.getAddress().getHostAddress(), slavePacket.getPort(), Integer.parseInt(receivedMessage));
+                    var process = new Process(slavePacket.getAddress().getHostAddress(), slavePacket.getPort(), Long.parseLong(receivedMessage));
 
                     processes.add(process);
                     System.out.println("Process info received: " + process);
@@ -158,7 +158,8 @@ public class Berkeley {
                 System.out.println("Received message from master: " + receivedMessage);
 
                 // Processa a mensagem recebida do mestre e gera a resposta
-                String answer = String.valueOf(startTime);
+                System.out.println("Slave time: " + GlobalTime.getTime());
+                String answer = String.valueOf(GlobalTime.getTime());
                 byte[] answerBuffer = answer.getBytes();
                 System.out.println("Gerando mensagem para ser enviada");
 

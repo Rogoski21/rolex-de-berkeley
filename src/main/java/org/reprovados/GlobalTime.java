@@ -2,13 +2,13 @@ package org.reprovados;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class GlobalTime {
-    private static final AtomicLong time = new AtomicLong(1000);
+    private static Long time = 1000l;
 
     public static long getTime() {
-        return time.get();
+        return time;
     }
 
     public static void incrementTime(long value) {
-        time.addAndGet(value);
+        time = value;
     }
 }
