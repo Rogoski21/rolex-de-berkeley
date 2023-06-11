@@ -4,7 +4,7 @@ Primeiro inicializa os escravos com processId 1, 2.
 após isso, inicializa o mestre com processId 0.
 
 Como inicializar um processo:
-java Process 1 localhost 8001  25 10000 1000
+java Process 1 localhost 8001 25 10000 1000
              |     |      |    |    |    |
              |     |      |    |    |   clockIncrement
              |     |      |    |    startTime
