@@ -3,12 +3,14 @@ package org.reprovados;
 import java.util.StringJoiner;
 
 public class Process {
+    private int id;
     private String host;
     private int port;
     private long currentTime;
     private int aDelay;
 
-    public Process(String host, int port, long currentTime) {
+    public Process(int id, String host, int port, long currentTime) {
+        this.id = id;
         this.host = host;
         this.port = port;
         this.currentTime = currentTime;
@@ -44,6 +46,14 @@ public class Process {
 
     public void setaDelay(int aDelay) {
         this.aDelay = aDelay;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 
     @Override
