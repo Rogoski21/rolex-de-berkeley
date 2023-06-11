@@ -7,13 +7,16 @@ public class Process {
     private String host;
     private int port;
     private long currentTime;
-    private int aDelay;
+    private long aDelay;
+    private long rtt;
 
-    public Process(int id, String host, int port, long currentTime) {
+    public Process(int id, String host, int port, long currentTime, long aDelay, long rtt) {
         this.id = id;
         this.host = host;
         this.port = port;
         this.currentTime = currentTime;
+        this.aDelay = aDelay;
+        this.rtt = rtt;
     }
 
     public String getHost() {
@@ -40,11 +43,19 @@ public class Process {
         this.currentTime = currentTime;
     }
 
-    public int getaDelay() {
+    public long getaDelay() {
         return aDelay;
     }
 
-    public void setaDelay(int aDelay) {
+    public long getRtt() {
+        return rtt;
+    }
+
+    public void setRtt(long rtt) {
+        this.rtt = rtt;
+    }
+
+    public void setaDelay(long aDelay) {
         this.aDelay = aDelay;
     }
 
