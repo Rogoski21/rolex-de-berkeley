@@ -7,6 +7,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Berkeley {
@@ -25,10 +26,12 @@ public class Berkeley {
 
     private static int processId;
 
+    private static int processPort;
+
     public static void main(String[] args) {
         processId = Integer.parseInt(args[0]);
         final String host = args[1];
-        final int port = Integer.parseInt(args[2]);
+        processPort = Integer.parseInt(args[2]);
         final long processTime = Long.parseLong(args[3]);
 
         final long startTime = Long.parseLong(args[4]);
@@ -40,10 +43,10 @@ public class Berkeley {
         new Thread(() -> {
             while (true) {
                 try {
-                    System.out.println("Hora Anterior: " + processClock.getTime());
+                    //System.out.println("Hora Anterior: " + processClock.getTime());
                     Thread.sleep(1000);
                     processClock.incrementTime(clockIncrement);
-                    System.out.println("Hora Atual: " + processClock.getTime());
+                    // System.out.println("Hora Atual: " + processClock.getTime());
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -55,15 +58,16 @@ public class Berkeley {
         }
 
         // Inicia os processos mestre e escravo
-        if(processId == 0) {
+        if (processId == 0) {
             System.out.println("I'm the boss");
-            bossProcess(host, port);
+            bossProcess(host, processPort);
         } else {
             System.out.println("I'm a intern");
-            slaveProcess(host, port);
+            slaveProcess(host, processPort);
         }
 
     }
+
     private static void bossProcess(String host, int port) {
         try {
             InetAddress multicastAddress = InetAddress.getByName(MULTICAST_ADDRESS);
@@ -71,7 +75,10 @@ public class Berkeley {
 
             multicastSocket.joinGroup(multicastAddress);
 
+            // recebe as horas do estag
+            DatagramSocket unicastSocket = new DatagramSocket(MASTER_PORT);
             // Fluxo principal
+
             while (true) {
                 String message = "Give me the time!";
 
@@ -87,29 +94,28 @@ public class Berkeley {
                 String answer = new String(answerPacket.getData(), 0, answerPacket.getLength());
                 System.out.println("Received message from master: " + answer);
 
-                DatagramSocket unicastSocket = new DatagramSocket(MASTER_PORT);
-
                 // Adiciona sua própria hora na lista
                 processes.add(new Process(0, host, port, processClock.getTime()));
 
                 // recebe a hora dos escravos
-                while (processes.size() < 2 /* número de escravos*/ ) {
+                while (processes.size() < 2 /* número de escravos*/) {
                     byte[] abuffer = new byte[256];
                     DatagramPacket slavePacket = new DatagramPacket(abuffer, abuffer.length);
-                    System.out.println("Aguardando mensagem");
+                    //System.out.println("Aguardando mensagem");
 
                     // Tempo para o mestre poder inicilizar a espera de uma comunicação unicast (usaremos como descompasso do mestre)
                     unicastSocket.receive(slavePacket);
 
+                    //System.out.println("mensagem recebida");
 
-                    System.out.println("mensagem recebida");
                     String[] receivedMessage = new String(slavePacket.getData(), 0, slavePacket.getLength()).split(";");
+                    System.out.println("Received message: "+ Arrays.toString(receivedMessage));
 
                     // "id;comando;tempo"
                     int id = Integer.parseInt(receivedMessage[0]);
                     String command = receivedMessage[1];
 
-                    if(!command.equals("mytime")) {
+                    if (!command.equals("mytime")) {
                         continue;
                     }
 
@@ -122,7 +128,7 @@ public class Berkeley {
                     System.out.println("Time: " + processClock.getTime());
                 }
 
-                unicastSocket.close();
+                //unicastSocket.close();
 
                 boolean repeatAverageCalc = true;
 
@@ -130,7 +136,7 @@ public class Berkeley {
                 //Verifica se precisa calcular uma nova média
 
                 long average = 0;
-                while (repeatAverageCalc){
+                while (repeatAverageCalc) {
 
                     // Se todos forem destoantes, pega o processo do mestre
                     if (included.isEmpty()) {
@@ -141,7 +147,7 @@ public class Berkeley {
                     long somaTudo = 0;
 
                     //Faz a media da lista dos escravos
-                    for (Process p: included) {
+                    for (Process p : included) {
                         somaTudo += p.getCurrentTime();
                     }
 
@@ -156,7 +162,7 @@ public class Berkeley {
                     repeatAverageCalc = includedSize != included.size();
                 }
 
-                for(Process process: processes) {
+                for (Process process : processes) {
                     var timeToAdjust = average - process.getCurrentTime();
 
                     if (process.getId() == 0) {
@@ -185,23 +191,52 @@ public class Berkeley {
     }
 
     private static void slaveProcess(String host, int port) {
+
         try {
+            DatagramSocket unicastSocket = new DatagramSocket(processPort);
+
             new Thread(() -> {
                 try {
-                    sendTime(port);
+                    sendTime(port, unicastSocket);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }).start();
 
             // Thread que ajusta o próprio tempo
+            new Thread(() -> {
+                try {
+                    byte[] abuffer = new byte[256];
+                    DatagramPacket slavePacket = new DatagramPacket(abuffer, abuffer.length);
+                    System.out.println("Aguardando mensagem");
+
+                    // Tempo para o mestre poder inicilizar a espera de uma comunicação unicast (usaremos como descompasso do mestre)
+                    unicastSocket.receive(slavePacket);
+
+
+                    System.out.println("mensagem recebida");
+                    String[] receivedMessage = new String(slavePacket.getData(), 0, slavePacket.getLength()).split(";");
+
+                    String command = receivedMessage[1];
+
+                    long time = Long.parseLong(receivedMessage[2]);
+
+                    if (command.equals("adjusttime")) {
+                        processClock.incrementTime(time);
+                        System.out.println("Tempo ajustado, novo tempo: " + processClock.getTime());
+                    }
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }).start();
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private static void sendTime(int port) throws IOException, InterruptedException {
+    private static void sendTime(int port, DatagramSocket unicastSocket) throws IOException, InterruptedException {
         InetAddress multicastAddress = InetAddress.getByName(MULTICAST_ADDRESS);
         MulticastSocket multicastSocket = new MulticastSocket(MULTICAST_PORT);
         multicastSocket.joinGroup(multicastAddress);
@@ -225,14 +260,13 @@ public class Berkeley {
 
             Thread.sleep(10);
 
-            DatagramSocket unicastSocket = new DatagramSocket(port);
             DatagramPacket answerPacket = new DatagramPacket(answerBuffer, answerBuffer.length,
                     datagramPacket.getAddress(), MASTER_PORT);
 
             unicastSocket.send(answerPacket);
-            System.out.println("Mensagem enviada para: " + answerPacket.getAddress().getHostAddress() +":" + answerPacket.getPort());
+            System.out.println("Mensagem enviada para: " + answerPacket.getAddress().getHostAddress() + ":" + answerPacket.getPort());
 
-            unicastSocket.close();
+
         }
     }
 
