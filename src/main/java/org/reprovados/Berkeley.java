@@ -71,17 +71,7 @@ public class Berkeley {
         System.out.println("----------------------------");
         System.out.println("Processos Utilizados para calcular a média:");
         for (Process process: processes) {
-            System.out.println("Slave Id:"+process.getId() + " Slave Time:"+process.getCurrentTime());
-        }
-        System.out.println("----------------------------");
-        System.out.println("");
-    }
-
-    private static void ProcessosNotIncluded(List<Process> processes) {
-        System.out.println("----------------------------");
-        System.out.println("Processos não utilizados para calcular a nova média:");
-        for (Process process: processes) {
-            System.out.println("Slave Id:"+process.getId() + " Slave Time:"+process.getCurrentTime());
+            System.out.println("Machine Id:"+process.getId() + " Machine Time:"+process.getCurrentTime());
         }
         System.out.println("----------------------------");
         System.out.println("");
@@ -141,8 +131,6 @@ public class Berkeley {
                     long adelay = Long.parseLong(receivedMessage[3]);
                     long rtt = (receiveTime - sendTime) + adelay; // + adelay de cada processo
 
-
-
                     var process = new Process(id, slavePacket.getAddress().getHostAddress(), slavePacket.getPort(), time, adelay, rtt);
 
                     initialAverageProcesses.add(process);
@@ -156,10 +144,6 @@ public class Berkeley {
 
                 long average = 0;
                 while (repeatAverageCalc) {
-
-//                    finalAverageProcesses.forEach(x -> {
-//                        System.out.println("Process Id: " + x.getId() +" Proccess Time: "+ x.getCurrentTime());
-//                    });
 
                     // Se todos forem destoantes, pega o processo do mestre
                     if (finalAverageProcesses.isEmpty()) {
@@ -185,23 +169,24 @@ public class Berkeley {
                     long finalAverage = average;
 
                     ProcessosUtilizados(finalAverageProcesses);
+                    List<Process> remainingProccess = new ArrayList<>();
 
-                    finalAverageProcesses.removeIf(p -> Math.abs(p.getCurrentTime() - finalAverage) > MAX_TOLERATION);
+                    for(Process process: finalAverageProcesses) {
+                        if (Math.abs(process.getCurrentTime() - finalAverage) > MAX_TOLERATION) {
+                            System.out.println("Removendo maquina:" + process.getId() + " Para calcular nova média, pois ele tem um tempo atual de:" + process.getCurrentTime() + " Desvio maximo permitido:" + MAX_TOLERATION);
+                        } else {
+                            remainingProccess.add(process);
+                        }
+                    }
+
+                    finalAverageProcesses.clear();
+                    finalAverageProcesses.addAll(remainingProccess);
+                    remainingProccess.clear();
 
                     repeatAverageCalc = includedSize != finalAverageProcesses.size();
 
                     if (repeatAverageCalc) {
-                        System.out.println("Existem maquinas com um tempo maior do que a tolerência de:"+ MAX_TOLERATION);
                         System.out.println("Calculando nova média");
-                        List<Process> processosRemovidos = new ArrayList<>();
-
-                        for(Process process : initialAverageProcesses) {
-                            if (finalAverageProcesses.stream().anyMatch(x -> x.getId() != process.getId())) {
-                                processosRemovidos.add(process);
-                            }
-                        }
-                        ProcessosNotIncluded(processosRemovidos);
-                        System.out.println();
                     }
                 }
 
@@ -213,7 +198,7 @@ public class Berkeley {
                     } else {
                         long oneDelayWay = process.getRtt() / 2;
                         long finalTime = timeToAdjust + oneDelayWay;
-                        System.out.println("Tempo de ajuste em ms:" + timeToAdjust + " One Way Delay:" + oneDelayWay + " Ajuste Final:" +finalTime );
+                        System.out.println("Machine id:" +process.getId()+ " RTT:" + process.getRtt()+ " Tempo de ajuste em ms:" + timeToAdjust + " One Way Delay:" + oneDelayWay + " Ajuste Final:" +finalTime );
                         var timeAdjustMessage = 0 + ";adjusttime;" + timeToAdjust;
 
                         byte[] timeAdjustBuffer = timeAdjustMessage.getBytes();
@@ -226,6 +211,7 @@ public class Berkeley {
                 }
 
                 Thread.sleep(20000); // 30 segundos na versão final
+
 
                 System.out.println("-----------------------");
 
@@ -321,11 +307,6 @@ public class Berkeley {
             DatagramPacket answerPacket = new DatagramPacket(answerBuffer, answerBuffer.length,
                     datagramPacket.getAddress(), MASTER_PORT);
             System.out.println(datagramPacket.getAddress());
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
             unicastSocket.send(answerPacket);
 
             System.out.println("---------------------------------");
