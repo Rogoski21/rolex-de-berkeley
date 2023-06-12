@@ -17,7 +17,6 @@ public class Berkeley {
     private static final long MAX_TOLERATION = 10000;
     private static final long TERMINALS_COUNT = 3; //Count of master + slaves quantity (3 default - 1 master and 2 slaves)
 
-
     private static BlockingQueue<String> messagesList = new LinkedBlockingQueue<>();
     private static final List<Process> initialAverageProcesses = new ArrayList<>();
     private static final List<Process> finalAverageProcesses = new ArrayList<>();
@@ -39,6 +38,8 @@ public class Berkeley {
         processPort = Integer.parseInt(args[2]);
         processTime = Long.parseLong(args[3]);
         aDelay = Long.parseLong(args[4]);
+        String masterHost = "";
+        int masterPort = 0;
 
         // Getting local ip address; Not localhost
         try(final DatagramSocket socket = new DatagramSocket()){
@@ -105,6 +106,7 @@ public class Berkeley {
                 byte[] buffer = message.getBytes();
                 DatagramPacket datagramPacket = new DatagramPacket(buffer, buffer.length, multicastAddress, MULTICAST_PORT);
                 multicastSocket.send(datagramPacket);
+                Thread.sleep(100);
                 sendTime = processClock.getTime();
 
                 // Adiciona sua própria hora na lista
@@ -117,8 +119,8 @@ public class Berkeley {
                     DatagramPacket slavePacket = new DatagramPacket(abuffer, abuffer.length);
                     //System.out.println("Aguardando mensagem");
 
-                    Thread.sleep(10);
                     // Tempo para o mestre poder inicilizar a espera de uma comunicação unicast (usaremos como descompasso do mestre)
+                    Thread.sleep(100);
                     unicastSocket.receive(slavePacket);
                     long receiveTime = processClock.getTime();
 
@@ -318,7 +320,12 @@ public class Berkeley {
 
             DatagramPacket answerPacket = new DatagramPacket(answerBuffer, answerBuffer.length,
                     datagramPacket.getAddress(), MASTER_PORT);
-
+            System.out.println(datagramPacket.getAddress());
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             unicastSocket.send(answerPacket);
 
             System.out.println("---------------------------------");
