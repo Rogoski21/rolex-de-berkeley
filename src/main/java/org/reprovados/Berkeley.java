@@ -15,6 +15,8 @@ public class Berkeley {
     private static final int MASTER_PORT = 8000;
 
     private static final long MAX_TOLERATION = 10000;
+    private static final long TERMINALS_COUNT = 3; //Count of master + slaves quantity (3 default - 1 master and 2 slaves)
+
 
     private static BlockingQueue<String> messagesList = new LinkedBlockingQueue<>();
     private static final List<Process> initialAverageProcesses = new ArrayList<>();
@@ -64,6 +66,26 @@ public class Berkeley {
 
     }
 
+    private static void ProcessosUtilizados(List<Process> processes) {
+        System.out.println("----------------------------");
+        System.out.println("Processos Utilizados para calcular a média:");
+        for (Process process: processes) {
+            System.out.println("Slave Id:"+process.getId() + " Slave Time:"+process.getCurrentTime());
+        }
+        System.out.println("----------------------------");
+        System.out.println("");
+    }
+
+    private static void ProcessosNotIncluded(List<Process> processes) {
+        System.out.println("----------------------------");
+        System.out.println("Processos não utilizados para calcular a nova média:");
+        for (Process process: processes) {
+            System.out.println("Slave Id:"+process.getId() + " Slave Time:"+process.getCurrentTime());
+        }
+        System.out.println("----------------------------");
+        System.out.println("");
+    }
+
     private static void bossProcess(String host, int port) {
         try {
             InetAddress multicastAddress = InetAddress.getByName(MULTICAST_ADDRESS);
@@ -90,7 +112,7 @@ public class Berkeley {
                 initialAverageProcesses.add(new Process(0, processHost, processPort, processClock.getTime(), 0, 0));
 
                 // recebe a hora dos escravos
-                while (initialAverageProcesses.size() < 3 /* número de processos incluindo o master*/) {
+                while (initialAverageProcesses.size() < TERMINALS_COUNT /* número de processos incluindo o master*/) {
                     byte[] abuffer = new byte[256];
                     DatagramPacket slavePacket = new DatagramPacket(abuffer, abuffer.length);
                     //System.out.println("Aguardando mensagem");
@@ -133,9 +155,9 @@ public class Berkeley {
                 long average = 0;
                 while (repeatAverageCalc) {
 
-                    finalAverageProcesses.forEach(x -> {
-                        System.out.println("Process Id: " + x.getId() +" Proccess Time: "+ x.getCurrentTime());
-                    });
+//                    finalAverageProcesses.forEach(x -> {
+//                        System.out.println("Process Id: " + x.getId() +" Proccess Time: "+ x.getCurrentTime());
+//                    });
 
                     // Se todos forem destoantes, pega o processo do mestre
                     if (finalAverageProcesses.isEmpty()) {
@@ -153,20 +175,31 @@ public class Berkeley {
                     }
 
                     average = somaTudo / finalAverageProcesses.size();
+                    System.out.println();
                     System.out.println("Média calculada: " + average);
 
                     int includedSize = finalAverageProcesses.size();
 
                     long finalAverage = average;
 
-                    System.out.println("Processos utilizados: " + finalAverageProcesses);
+                    ProcessosUtilizados(finalAverageProcesses);
 
                     finalAverageProcesses.removeIf(p -> Math.abs(p.getCurrentTime() - finalAverage) > MAX_TOLERATION);
 
                     repeatAverageCalc = includedSize != finalAverageProcesses.size();
 
                     if (repeatAverageCalc) {
+                        System.out.println("Existem maquinas com um tempo maior do que a tolerência de:"+ MAX_TOLERATION);
                         System.out.println("Calculando nova média");
+                        List<Process> processosRemovidos = new ArrayList<>();
+
+                        for(Process process : initialAverageProcesses) {
+                            if (finalAverageProcesses.stream().anyMatch(x -> x.getId() != process.getId())) {
+                                processosRemovidos.add(process);
+                            }
+                        }
+                        ProcessosNotIncluded(processosRemovidos);
+                        System.out.println();
                     }
                 }
 
@@ -190,7 +223,7 @@ public class Berkeley {
                     }
                 }
 
-                Thread.sleep(5000); // 30 segundos na versão final
+                Thread.sleep(20000); // 30 segundos na versão final
 
                 System.out.println("-----------------------");
 
