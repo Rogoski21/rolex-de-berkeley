@@ -67,13 +67,16 @@ public class Process {
         this.id = id;
     }
 
+
     @Override
     public String toString() {
         return new StringJoiner(", ", Process.class.getSimpleName() + "[", "]")
+                .add("id=" + id)
                 .add("host='" + host + "'")
                 .add("port=" + port)
                 .add("currentTime=" + currentTime)
                 .add("aDelay=" + aDelay)
+                .add("rtt=" + rtt)
                 .toString();
     }
 }
